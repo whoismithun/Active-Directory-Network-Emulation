@@ -14,11 +14,15 @@ The simulated Active Directory environment consists of the following machines:
 
 * **SIMLAB-DC**: A Windows Server 2019 machine acting as the Domain Controller for `SIMLAB.local`. The `Administrator` account has domain administrative privileges.
 * **SIMLAB-PC1**: A Windows 10 Enterprise workstation. The `simlabuser1` account is a local administrator on this machine.
-* **SIMLAB-PC2**: A Windows 10 Enterprise workstation. The `simlabuser2` account is a local administrator on this machine.
+* **SIMLAB-PC2**: A Windows 10 Enterprise workstation. Both the `simlabuser1` and `simlabuser2` accounts are local administrators on this machine.
 
 The diagram below illustrates the network setup:
 
-![Active Directory Network Diagram](./image_6e584f.png)
+![Active Directory Network Diagram](https://github.com/whoismithun/Active-Directory-Network-Emulation/blob/94f8a2bac3c32afe843dc49ed8ff9be47d1ee399/setup_images/AD_lab%20setup.png)
+
+The network structure also contains,
+* a SQLService account with a corresponding SPN(to perform kerberoasting)
+* a GPO for the domain which turns of Windows Defender service for domain-joined hosts
 
 ## Attacks Performed
 
